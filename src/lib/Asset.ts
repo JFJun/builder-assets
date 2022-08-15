@@ -8,7 +8,7 @@ import * as gltfPipeline from 'gltf-pipeline'
 import { CIDUtils } from './CIDUtils'
 import { getSHA256 } from './crypto'
 import { getFiles, getRelativeDir } from './files'
-import { checkFile, uploadFile } from './s3'
+import { checkFile, uploadFile } from './minio'
 
 const ASSET_RESOURCE_FORMATS = ['.glb', '.gltf', '.png', '.jpg', '.bin']
 const ASSET_SCENE_FORMATS = ['.glb']

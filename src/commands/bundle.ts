@@ -1,6 +1,7 @@
 import * as fs from 'fs-extra'
 import * as path from 'path'
 import { Log } from 'decentraland-commons'
+import * as mime from 'mime/lite'
 
 import {
   AssetPackInfo,
@@ -9,6 +10,8 @@ import {
 import { AssetPack } from '../lib/AssetPack'
 import { Manifest } from '../lib/Manifest'
 import { getDirectories } from '../lib/files'
+import { uploadFile } from "../lib/minio"
+import {uploadDB} from "../lib/UploadDB"
 
 type Options = {
   src: string
@@ -51,13 +54,16 @@ async function main(options: Options) {
     const skippedDirErrors: string[] = []
 
     for (const dirPath of directories) {
+      console.log("dirPath: ",dirPath)
       const assetPackInfo = new AssetPackInfo(dirPath)
       await assetPackInfo.read()
 
       if (assetPackInfo.isValid()) {
         const { id, title } = assetPackInfo.toJSON()
         const assetPack = new AssetPack(id!, title!, dirPath)
-
+        // 上传图片到服务器
+        await uploadAssetPackPng(options.bucket,id,dirPath)
+        await uploadDB(assetPack,"0x784054926a114c097765dCFC96d6d9b67b6ed037")
         await uploadAssetPack(assetPack, options)
         uploadedAssetPacks.push(assetPack)
       } else {
@@ -95,8 +101,21 @@ async function uploadAssetPack(assetPack: AssetPack, options: Options) {
   }
 
   if (options.bucket) {
+    console.log("start upload to bucket")
     await assetPack.upload(options.bucket, options.force)
   }
+
+}
+
+// 上传 png图片到服务器
+async function uploadAssetPackPng(bucketName: string,id: string | undefined ,dirPath: string) {
+  let pngPath = path.join(dirPath,"thumbnail.png")
+  console.log("pngUrl :",pngPath)
+  const pngData = await fs.readFile(pngPath)
+  const bn = bucketName + "/asset_packs"
+  const contentType = mime.getType(pngPath)
+  const key = id + ".png"
+  return uploadFile(bn,contentType,key,pngData)
 }
 
 function checkOptions(options: Options) {
